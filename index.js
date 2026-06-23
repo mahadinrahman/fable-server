@@ -1,0 +1,96 @@
+const express = require('express');
+const app = express()
+const port = 5000
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const cors=require('cors');
+require('dotenv').config();
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.send('Hello World!')
+})
+
+
+const uri = process.env.MONGO_DB_URI;
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+
+async function run() {
+  try {
+    // Connect the client to the server	(optional starting in v4.7)
+    await client.connect();
+
+    const database=client.db('fable');
+    const booksCollection=database.collection('books');
+
+    // books api..........................
+
+    app.get('/books',async(req,res)=>{
+      const query={};
+
+      if(req.query.userId){
+        query.userId=req.query.userId;
+      }
+      if(req.query.status){
+        query.status=req.query.status;
+      }
+      const cursor=booksCollection.find(query);
+      const result=await cursor.toArray();
+      res.send(result);
+    })
+
+
+    app.post('/books',async(req,res)=>{
+        const book=req.body;
+        const result=await booksCollection.insertOne(book);
+        res.send(result);
+    })
+
+    app.patch('/books/:id',async(req,res)=>{
+      const id=req.params.id;
+      const filter={_id:new ObjectId(id)};
+      const updateDoc={$set:req.body};
+
+      const result=await booksCollection.findOneAndUpdate(filter,updateDoc,{returnDocument:'after'});
+      })
+
+      app.delete('/books/:id',async(req,res)=>{
+        const id=req.params.id;
+        const filter={_id:new ObjectId(id)};
+
+        const result=await booksCollection.deleteOne(filter);
+        res.send(result);
+      })
+
+     //sob books er jonno..............
+     app.get('/books',async(req,res)=>{
+      const result=booksCollection.find().toArray();
+      res.send(result);
+    })
+
+
+
+
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } finally {
+    // Ensures that the client will close when you finish/error
+    // await client.close();
+  }
+}
+run().catch(console.dir);
+
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
