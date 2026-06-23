@@ -31,6 +31,7 @@ async function run() {
 
     const database=client.db('fable');
     const booksCollection=database.collection('books');
+    const bookmarkCollection=database.collection('bookmark');
 
     // books api..........................
 
@@ -77,8 +78,52 @@ async function run() {
       res.send(result);
     })
 
+     //details book er jonno........
+
+     app.get('/books/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    
+    const { ObjectId } = require('mongodb'); 
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ error: true, message: "Invalid MongoDB ID format" });
+    }
+
+    const query = { _id: new ObjectId(id) };
+    const result = await booksCollection.findOne(query);
+
+    if (!result) {
+      return res.status(404).send({ error: true, message: "Book not found" });
+    }
+
+    res.send(result);
+  } catch (error) {
+    console.error("Error caught:", error.message);
+    res.status(500).send({ error: true, message: error.message });
+  }
+});
+
+   //bookmark api..................
+   
+    app.post('/bookmark',async(req,res)=>{
+        const book=req.body;
+        const result=await bookmarkCollection.insertOne(book);
+        res.send(result);
+    })
 
 
+    
+    app.get('/bookmark', async (req, res) => {
+    
+        const email = req.query.email; 
+
+        const query = { userEmail: email };
+        const result = await bookmarkCollection.find(query).toArray(); 
+        res.send(result);
+    });
+
+    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
