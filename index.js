@@ -38,6 +38,7 @@ async function run() {
     const booksCollection = database.collection('books');
     const bookmarkCollection = database.collection('bookmark');
     const paymentCollection = database.collection('payment');
+    const usersCollection = database.collection('user');
 
     // books api..........................
 
