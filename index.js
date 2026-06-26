@@ -228,14 +228,14 @@ async function run() {
     });
 
 
-    app.get('/payments', verifyToken,verifyAdmin, async (req, res) => {
+    app.get('/payments', verifyToken, async (req, res) => {
       const result = await paymentCollection.find().toArray();
       res.send(result);
     })
 
     // user API...........................
 
-    app.get('/users', verifyToken, async (req, res) => {
+    app.get('/users', verifyToken,verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     })
