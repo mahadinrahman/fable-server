@@ -39,6 +39,47 @@ async function run() {
     const bookmarkCollection = database.collection('bookmark');
     const paymentCollection = database.collection('payment');
     const usersCollection = database.collection('user');
+    const sessionCollection = database.collection('session');
+
+
+    const logger = (req, res, next) => {
+      console.log('logger middleware logged', req.params);
+      next();
+    }
+
+    const verifyToken = async (req, res, next) => {
+      console.log('headers', req.headers);
+
+      const authHeader = req.headers?.authorization;
+      if (!authHeader) {
+        return res.status(401).send({ message: 'unauthorized access' })
+      }
+
+      const token = authHeader.split(' ')[1]
+      if (!token) {
+        return res.status(401).send({ message: "unauthorized access" })
+      }
+
+      const query = { token: token }
+      const session = await sessionCollection.findOne(query);
+
+      if (!session) {
+        return res.status(401).send({ message: "unauthorized access" })
+      }
+      const userId = session.userId
+      const userQuery = {
+        _id: userId
+      }
+      const user = await usersCollection.findOne(userQuery);
+      if (!user) {
+        return res.status(401).send({ message: "unauthorized access" })
+      }
+      console.log(user);
+
+      next();
+    }
+
+
 
     // books api..........................
 
@@ -63,7 +104,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/books/:id', async (req, res) => {
+    app.patch('/books/:id', logger, verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = { $set: req.body };
@@ -81,7 +122,7 @@ async function run() {
 
     //sob books er jonno..............
     app.get('/books', async (req, res) => {
-      const result =await booksCollection.find().toArray();
+      const result = await booksCollection.find().toArray();
       res.send(result);
     })
 
@@ -120,7 +161,7 @@ async function run() {
     })
 
 
-    app.get('/bookmark', async (req, res) => {
+    app.get('/bookmark', verifyToken, async (req, res) => {
 
       const email = req.query.email;
 
@@ -148,17 +189,17 @@ async function run() {
 
       res.send(result);
     });
-    
-    
-    app.get('/payments', async (req, res) => {
-      const result =await paymentCollection.find().toArray();
+
+
+    app.get('/payments', verifyToken, async (req, res) => {
+      const result = await paymentCollection.find().toArray();
       res.send(result);
     })
 
     // user API...........................
 
-    app.get('/users', async (req, res) => {
-      const result =await usersCollection.find().toArray();
+    app.get('/users', verifyToken, async (req, res) => {
+      const result = await usersCollection.find().toArray();
       res.send(result);
     })
 
