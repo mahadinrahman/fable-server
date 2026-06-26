@@ -103,8 +103,20 @@ async function run() {
     }
     next();
   }
+  
+   //must be used after verifyToken middleware
+  const verifyAdminOrWriter = (req, res, next) => {
+  if (
+    req.user?.role === "admin" ||
+    req.user?.role === "writer"
+  ) {
+    return next();
+  }
 
-
+  return res.status(403).send({
+    message: "forbidden access",
+  });
+};
 
     // books api..........................
 
@@ -123,13 +135,13 @@ async function run() {
     })
 
 
-    app.post('/books', async (req, res) => {
+    app.post('/books', verifyToken, verifyWriter, async (req, res) => {
       const book = req.body;
       const result = await booksCollection.insertOne(book);
       res.send(result);
     })
 
-    app.patch('/books/:id', logger, verifyToken, async (req, res) => {
+    app.patch('/books/:id', logger, verifyToken,verifyAdminOrWriter, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = { $set: req.body };
@@ -137,7 +149,7 @@ async function run() {
       const result = await booksCollection.findOneAndUpdate(filter, updateDoc, { returnDocument: 'after' });
     })
 
-    app.delete('/books/:id', async (req, res) => {
+    app.delete('/books/:id',verifyToken,verifyAdminOrWriter, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -179,7 +191,7 @@ async function run() {
 
     //bookmark api..................
 
-    app.post('/bookmark', async (req, res) => {
+    app.post('/bookmark',verifyToken, async (req, res) => {
       const book = req.body;
       const result = await bookmarkCollection.insertOne(book);
       res.send(result);
@@ -197,7 +209,7 @@ async function run() {
 
     // payment api...................
 
-    app.post('/payments', async (req, res) => {
+    app.post('/payments',verifyToken, async (req, res) => {
       const { sessionId } = req.body;
 
       const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -216,7 +228,7 @@ async function run() {
     });
 
 
-    app.get('/payments', verifyToken, async (req, res) => {
+    app.get('/payments', verifyToken,verifyAdmin, async (req, res) => {
       const result = await paymentCollection.find().toArray();
       res.send(result);
     })
