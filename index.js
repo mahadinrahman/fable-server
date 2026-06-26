@@ -233,6 +233,12 @@ async function run() {
       res.send(result);
     })
 
+    // user API...........................
+
+    app.get('/users', verifyToken,verifyAdmin, async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    })
 
 
 
