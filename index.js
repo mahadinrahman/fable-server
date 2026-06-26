@@ -76,8 +76,18 @@ async function run() {
       }
       console.log(user);
 
+       req.user=user;
       next();
     }
+
+    //must be used after verifyToken middleware
+  const verifyReader=async(req,res,next)=>{
+    if(req.user?.role!=='reader'){
+      return res.status(403).send({message:'forbidden access'})
+    }
+    next();
+  }
+
 
 
 
