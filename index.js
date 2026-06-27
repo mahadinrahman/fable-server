@@ -209,7 +209,7 @@ async function run() {
 
     // payment api...................
 
-    app.post('/payments',verifyToken, async (req, res) => {
+    app.post('/payments', async (req, res) => {
       const { sessionId } = req.body;
 
       const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -228,7 +228,7 @@ async function run() {
     });
 
 
-    app.get('/payments', verifyToken, async (req, res) => {
+    app.get('/payments', async (req, res) => {
       const result = await paymentCollection.find().toArray();
       res.send(result);
     })
@@ -240,7 +240,27 @@ async function run() {
       res.send(result);
     })
 
+   
+    app.patch('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { role } = req.body; // ক্লায়েন্ট থেকে আসা নতুন রোল ('admin', 'writer', 'reader')
 
+        const result = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { role: role } }
+        );
+
+        if (result.modifiedCount === 0) {
+          return res.status(404).send({ message: "User not found or role unchanged" });
+        }
+
+        res.send({ success: true, message: "Role updated!" });
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
