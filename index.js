@@ -76,51 +76,51 @@ async function run() {
       }
       console.log(user);
 
-       req.user=user;
+      req.user = user;
       next();
     }
 
     //must be used after verifyToken middleware
-  const verifyReader=async(req,res,next)=>{
-    if(req.user?.role!=='reader'){
-      return res.status(403).send({message:'forbidden access'})
+    const verifyReader = async (req, res, next) => {
+      if (req.user?.role !== 'reader') {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+      next();
     }
-    next();
-  }
-   
-   //must be used after verifyToken middleware
-  const verifyWriter=async(req,res,next)=>{
-    if(req.user?.role!=='writer'){
-      return res.status(403).send({message:'forbidden access'})
-    }
-    next();
-  }
 
- //must be used after verifyToken middleware
-  const verifyAdmin=async(req,res,next)=>{
-    if(req.user?.role!=='admin'){
-      return res.status(403).send({message:'forbidden access'})
+    //must be used after verifyToken middleware
+    const verifyWriter = async (req, res, next) => {
+      if (req.user?.role !== 'writer') {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+      next();
     }
-    next();
-  }
-  
-   //must be used after verifyToken middleware
-  const verifyAdminOrWriter = (req, res, next) => {
-  if (
-    req.user?.role === "admin" ||
-    req.user?.role === "writer"
-  ) {
-    return next();
-  }
 
-  return res.status(403).send({
-    message: "forbidden access",
-  });
-};
+    //must be used after verifyToken middleware
+    const verifyAdmin = async (req, res, next) => {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+      next();
+    }
+
+    //must be used after verifyToken middleware
+    const verifyAdminOrWriter = (req, res, next) => {
+      if (
+        req.user?.role === "admin" ||
+        req.user?.role === "writer"
+      ) {
+        return next();
+      }
+
+      return res.status(403).send({
+        message: "forbidden access",
+      });
+    };
 
     // books api..........................
 
-    app.get('/books', async (req, res) => {
+    app.get('/book', async (req, res) => {
       const query = {};
 
       if (req.query.userId) {
@@ -141,7 +141,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/books/:id', logger, verifyToken,verifyAdminOrWriter, async (req, res) => {
+    app.patch('/books/:id', logger, verifyToken, verifyAdminOrWriter, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = { $set: req.body };
@@ -149,7 +149,7 @@ async function run() {
       const result = await booksCollection.findOneAndUpdate(filter, updateDoc, { returnDocument: 'after' });
     })
 
-    app.delete('/books/:id',verifyToken,verifyAdminOrWriter, async (req, res) => {
+    app.delete('/books/:id', verifyToken, verifyAdminOrWriter, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -159,9 +159,26 @@ async function run() {
 
     //sob books er jonno..............
     app.get('/books', async (req, res) => {
-      const result = await booksCollection.find().toArray();
-      res.send(result);
+      const { page = 1, limit = 6 } = req.query;
+      const skip = (Number(page) - 1) * Number(limit);
+
+      const result = await booksCollection.find().sort({ _id: -1 }).skip(skip).limit(Number(limit)).toArray();
+
+      const totalData = await booksCollection.countDocuments()
+      const totalPage = Math.ceil(totalData / Number(limit))
+
+      res.send({ data: result, page: Number(page), totalPage });
+
     })
+
+    // for admin books
+    
+      app.get('/allBooks', async (req, res) => {
+        const result = await booksCollection.find().sort({ _id: -1 }).toArray();
+        res.send(result);
+      });
+    
+
 
     //details book er jonno........
 
@@ -191,7 +208,7 @@ async function run() {
 
     //bookmark api..................
 
-    app.post('/bookmark',verifyToken, async (req, res) => {
+    app.post('/bookmark', verifyToken, async (req, res) => {
       const book = req.body;
       const result = await bookmarkCollection.insertOne(book);
       res.send(result);
@@ -235,12 +252,12 @@ async function run() {
 
     // user API...........................
 
-    app.get('/users', verifyToken,verifyAdmin, async (req, res) => {
+    app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     })
 
-   
+
     app.patch('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
       try {
         const id = req.params.id;
@@ -260,7 +277,7 @@ async function run() {
         res.status(500).send({ message: error.message });
       }
     });
-    
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
